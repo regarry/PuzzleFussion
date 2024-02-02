@@ -16,7 +16,8 @@ import cairosvg
 import imageio
 from tqdm import tqdm
 from pytorch_fid.fid_score import calculate_fid_given_paths
-from puzzle_fusion.crosscut_dataset import load_crosscut_data
+
+
 from puzzle_fusion.script_util import (
     model_and_diffusion_defaults,
     create_model_and_diffusion,
@@ -124,67 +125,69 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
         sample[k:k+1,:,:,:2] = th.Tensor(center_total).cuda() + poly
         # sample[k:k+1,:,:,:2] = sample[k:k+1,:,:,:2] + poly
     sample = sample[:,:,:,:2]
-    for i in tqdm(range(sample.shape[1])):
-        resolution = 256
-        images = []
-        images2 = []
-        images3 = []
-        for k in range(sample.shape[0]):
-            draw = drawsvg.Drawing(resolution, resolution, displayInline=False)
-            draw.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='black'))
-            draw2 = drawsvg.Drawing(resolution, resolution, displayInline=False)
-            draw2.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='black'))
-            draw3 = drawsvg.Drawing(resolution, resolution, displayInline=False)
-            draw3.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='black'))
-            draw_color = drawsvg.Drawing(resolution, resolution, displayInline=False)
-            draw_color.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='white'))
-            polys = []
-            types = []
-            for j, point in (enumerate(sample[k][i])):
-                if model_kwargs[f'src_key_padding_mask'][i][j]==1:
-                    continue
-                point = point.cpu().data.numpy()
-                if j==0:
-                    poly = []
-                if j>0 and (model_kwargs[f'room_indices'][i, j]!=model_kwargs[f'room_indices'][i, j-1]).any():
-                    c = (len(polys)%28) + 1
-                    polys.append(poly)
-                    types.append(c)
-                    poly = []
-                pred_center = False
-                if pred_center:
-                    point = point/2 + 1
-                    point = point * resolution//2
-                else:
-                    point = point/2 + 0.5
-                    point = point * resolution
-                poly.append((point[0], point[1]))
-            c = (len(polys)%28) + 1
-            polys.append(poly)
-            types.append(c)
-            for poly, c in zip(polys, types):
-                room_type = c
-                c = webcolors.hex_to_rgb(ID_COLOR[c])
-                draw_color.append(drawsvg.Lines(*np.array(poly).flatten().tolist(), close=True, fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='black', stroke_width=1))
-                draw.append(drawsvg.Lines(*np.array(poly).flatten().tolist(), close=True, fill='black', fill_opacity=0.0, stroke=webcolors.rgb_to_hex([int(x/2) for x in c]), stroke_width=0.5*(resolution/256)))
-                draw2.append(drawsvg.Lines(*np.array(poly).flatten().tolist(), close=True, fill=ID_COLOR[room_type], fill_opacity=1.0, stroke=webcolors.rgb_to_hex([int(x/2) for x in c]), stroke_width=0.5*(resolution/256)))
-                for corner in poly:
-                    draw.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
-                    draw3.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
-            #images.append(Image.open(io.BytesIO(cairosvg.svg2png(draw.asSvg()))))
-            #images2.append(Image.open(io.BytesIO(cairosvg.svg2png(draw2.asSvg()))))
-            #images3.append(Image.open(io.BytesIO(cairosvg.svg2png(draw3.asSvg()))))
-            if k==sample.shape[0]-1 or True:
-                if save_edges:
-                    draw.save_svg(f'outputs/{ext}/{tmp_count+i}_{k}_{ext}.svg')
-                if save_svg:
-                    draw_color.save_svg(f'outputs/{ext}/{tmp_count+i}c_{k}_{ext}.svg')
-                else:
-                    Image.open(io.BytesIO(cairosvg.svg2png(draw_color.asSvg()))).save(f'outputs/{ext}/{tmp_count+i}c_{ext}.png')
-        # if save_gif:
-        #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}.gif', images, fps=10, loop=1)
-        #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v2.gif', images2, fps=10, loop=1)
-        #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v3.gif', images3, fps=10, loop=1)
+    draw_ =False
+    if draw_ == True:
+        for i in tqdm(range(sample.shape[1])):
+            resolution = 256
+            images = []
+            images2 = []
+            images3 = []
+            for k in range(sample.shape[0]):
+                draw = drawsvg.Drawing(resolution, resolution, displayInline=False)
+                draw.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='black'))
+                draw2 = drawsvg.Drawing(resolution, resolution, displayInline=False)
+                draw2.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='black'))
+                draw3 = drawsvg.Drawing(resolution, resolution, displayInline=False)
+                draw3.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='black'))
+                draw_color = drawsvg.Drawing(resolution, resolution, displayInline=False)
+                draw_color.append(drawsvg.Rectangle(0,0,resolution,resolution, fill='white'))
+                polys = []
+                types = []
+                for j, point in (enumerate(sample[k][i])):
+                    if model_kwargs[f'src_key_padding_mask'][i][j]==1:
+                        continue
+                    point = point.cpu().data.numpy()
+                    if j==0:
+                        poly = []
+                    if j>0 and (model_kwargs[f'room_indices'][i, j]!=model_kwargs[f'room_indices'][i, j-1]).any():
+                        c = (len(polys)%28) + 1
+                        polys.append(poly)
+                        types.append(c)
+                        poly = []
+                    pred_center = False
+                    if pred_center:
+                        point = point/2 + 1
+                        point = point * resolution//2
+                    else:
+                        point = point/2 + 0.5
+                        point = point * resolution
+                    poly.append((point[0], point[1]))
+                c = (len(polys)%28) + 1
+                polys.append(poly)
+                types.append(c)
+                for poly, c in zip(polys, types):
+                    room_type = c
+                    c = webcolors.hex_to_rgb(ID_COLOR[c])
+                    draw_color.append(drawsvg.Lines(*np.array(poly).flatten().tolist(), close=True, fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='black', stroke_width=1))
+                    draw.append(drawsvg.Lines(*np.array(poly).flatten().tolist(), close=True, fill='black', fill_opacity=0.0, stroke=webcolors.rgb_to_hex([int(x/2) for x in c]), stroke_width=0.5*(resolution/256)))
+                    draw2.append(drawsvg.Lines(*np.array(poly).flatten().tolist(), close=True, fill=ID_COLOR[room_type], fill_opacity=1.0, stroke=webcolors.rgb_to_hex([int(x/2) for x in c]), stroke_width=0.5*(resolution/256)))
+                    for corner in poly:
+                        draw.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
+                        draw3.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
+                #images.append(Image.open(io.BytesIO(cairosvg.svg2png(draw.asSvg()))))
+                #images2.append(Image.open(io.BytesIO(cairosvg.svg2png(draw2.asSvg()))))
+                #images3.append(Image.open(io.BytesIO(cairosvg.svg2png(draw3.asSvg()))))
+                if k==sample.shape[0]-1 or True:
+                    if save_edges:
+                        draw.save_svg(f'outputs/{ext}/{tmp_count+i}_{k}_{ext}.svg')
+                    if save_svg:
+                        draw_color.save_svg(f'outputs/{ext}/{tmp_count+i}c_{k}_{ext}.svg')
+                    else:
+                        Image.open(io.BytesIO(cairosvg.svg2png(draw_color.asSvg()))).save(f'outputs/{ext}/{tmp_count+i}c_{ext}.png')
+            # if save_gif:
+            #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}.gif', images, fps=10, loop=1)
+            #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v2.gif', images2, fps=10, loop=1)
+            #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v3.gif', images3, fps=10, loop=1)
     return sample[-1]
 
 def main():
@@ -202,6 +205,11 @@ def main():
     model.eval()
 
     errors = []
+    iou_ = 0
+    recal = 0
+    pres  = 0
+    items = 0
+
     for _ in range(1):
         print("sampling...")
         tmp_count = 0
@@ -210,16 +218,31 @@ def main():
         os.makedirs('outputs/gif', exist_ok=True)
 
         if args.dataset=='crosscut':
+            from puzzle_fusion.crosscut_dataset import load_crosscut_data
             ID_COLOR = {1: '#EE4D4D', 2: '#C67C7B', 3: '#FFD274', 4: '#BEBEBE', 5: '#BFE3E8',
                         6: '#7BA779', 7: '#E87A90', 8: '#FF8C69', 9: '#1F849B', 10: '#727171',
                         11: '#785A67', 12:'#D3A2C7', 13: '#ff55a3',14 : '#d7e8fc', 15: '#ff91af' ,
                         16 :'#d71868', 17: '#d19fe8', 18: '#00cc99', 19: '#eec8c8', 20:'#739373'}
-            num_room_types = 14
+           
             data = load_crosscut_data(
                 batch_size=args.batch_size,
                 set_name=args.set_name,
                 rotation=args.rotation,
                 use_image_features=args.use_image_features,
+            )
+        elif  args.dataset=='voronoi':
+            from puzzle_fusion.voronoi import load_voronoi_data
+        
+            ID_COLOR = {1: '#EE4D4D', 2: '#C67C7B', 3: '#FFD274', 4: '#BEBEBE', 5: '#BFE3E8',
+                        6: '#7BA779', 7: '#E87A90', 8: '#FF8C69', 9: '#1F849B', 10: '#727171',
+                        11: '#785A67', 12:'#D3A2C7', 13: '#ff55a3',14 : '#d7e8fc', 15: '#ff91af' ,
+                        16 :'#d71868', 17: '#d19fe8', 18: '#00cc99', 19: '#eec8c8', 20:'#739373'}
+           
+            data = load_voronoi_data(
+                batch_size=args.batch_size,
+                set_name=args.set_name,
+                rotation=args.rotation,
+                
             )
         else:
             print("dataset does not exist!")
@@ -245,8 +268,17 @@ def main():
             sample_gt = sample_gt.permute([0, 1, 3, 2])
             gt = save_samples(sample_gt, 'gt', model_kwargs, args.rotation, tmp_count, ID_COLOR=ID_COLOR, save_svg=args.save_svg)
             pred = save_samples(sample, 'pred', model_kwargs, args.rotation, tmp_count, ID_COLOR=ID_COLOR, save_svg=args.save_svg)
-            print(get_metric(gt, pred, model_kwargs))
+            outs =(get_metric(gt, pred, model_kwargs))
+            #import pdb ; pdb.set_trace()
+            pres += outs[1][0]
+            recal += outs[1][1]
+            iou_ += outs[0]
+            items +=1
+
             tmp_count+=sample_gt.shape[1]
+        print( "overlap is:" , iou_/items)
+        print( "precision is:" , pres/items)
+        print( "recall is:" , recal/items)
         print("sampling complete")
 
 

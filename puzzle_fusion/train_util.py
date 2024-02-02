@@ -208,14 +208,39 @@ class TrainLoop:
             update_ema(params, self.mp_trainer.master_params, rate=rate)
 
     def _anneal_lr(self):
-        if not self.lr_anneal_steps:
-            return
-        frac_done = (self.step + self.resume_step) / self.lr_anneal_steps
+        #if not self.lr_anneal_steps:
+        #    return
+        self.lr_anneal_steps=500000000000000
+        lr=self.lr
+        if (self.step>=5000):
+            lr =5e-4 
+        if (self.step>=70000):
+            lr =1e-4 
+        if (self.step>=120000):
+            lr =8e-5 
+        if (self.step>=150000):
+            lr =5e-5 
+        if (self.step>=200000):
+            lr =1e-5 
+        if (self.step>=2500000):
+            lr =5e-6 
+
+       
+
+
+        for param_group in self.opt.param_groups:
+            param_group["lr"] = lr
+            self.log_lr=lr
+       
+            
+        """frac_done = (self.step + self.resume_step) / self.lr_anneal_steps
         lr = self.lr * (1 - frac_done)
         for param_group in self.opt.param_groups:
             param_group["lr"] = lr
+        self.log_lr=lr"""
 
     def log_step(self):
+        logger.logkv("lr", self.log_lr)
         logger.logkv("step", self.step + self.resume_step)
         logger.logkv("samples", (self.step + self.resume_step + 1) * self.global_batch)
 

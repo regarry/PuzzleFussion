@@ -22,10 +22,11 @@ def setup_dist():
     """
     Setup a distributed process group.
     """
+    #import pdb;pdb.set_trace()
     if dist.is_initialized():
         return
     ## temporary removed to manually set the CUDA_VISIBLE_DEVICES
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"#f"{MPI.COMM_WORLD.Get_rank() % GPUS_PER_NODE}"
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{MPI.COMM_WORLD.Get_rank() % GPUS_PER_NODE}"
 
     comm = MPI.COMM_WORLD
     backend = "gloo" if not th.cuda.is_available() else "nccl"
@@ -41,6 +42,7 @@ def setup_dist():
     port = comm.bcast(_find_free_port(), root=0)
     os.environ["MASTER_PORT"] = str(port)
     dist.init_process_group(backend=backend, init_method="env://")
+   
 
 
 def dev():
@@ -48,8 +50,7 @@ def dev():
     Get the device to use for torch.distributed.
     """
     if th.cuda.is_available():
-        return th.device(f"cuda:{MPI.COMM_WORLD.Get_rank()}")
-        # return th.device(f"cuda")
+        return th.device(f"cuda")
     return th.device("cpu")
 
 
@@ -59,25 +60,21 @@ def load_state_dict(path, **kwargs):
     """
     chunk_size = 2 ** 30  # MPI has a relatively small size limit
     if MPI.COMM_WORLD.Get_rank() == 0:
-    # if dist.get_rank() == 0:
         with bf.BlobFile(path, "rb") as f:
             data = f.read()
         num_chunks = len(data) // chunk_size
         if len(data) % chunk_size:
             num_chunks += 1
         MPI.COMM_WORLD.bcast(num_chunks)
-        # dist.broadcast(num_chunks, dist.get_rank())
         
         for i in range(0, len(data), chunk_size):
             MPI.COMM_WORLD.bcast(data[i : i + chunk_size])
-            # dist.broadcast(data[i : i + chunk_size], dist.get_rank())
     else:
         num_chunks = MPI.COMM_WORLD.bcast(None)
-        # num_chunks = dist.broadcast(None, dist.get_rank())
         data = bytes()
         for _ in range(num_chunks):
             data += MPI.COMM_WORLD.bcast(None)
-            # data += dist.broadcast(None, dist.get_rank())
+            #data += dist.broadcast(None)
     return th.load(io.BytesIO(data), **kwargs)
 
 
