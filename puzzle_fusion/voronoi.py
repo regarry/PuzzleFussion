@@ -55,11 +55,11 @@ def load_voronoi_data(
     dataset = voronoi(set_name, rotation = rotation)
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size =batch_size, shuffle =True, num_workers=2, drop_last=False
+            dataset, batch_size =batch_size, shuffle =True, num_workers=0, drop_last=False
         )
     else:
         loader = DataLoader(
-            dataset, batch_size =batch_size, shuffle =True, num_workers=2, drop_last=False
+            dataset, batch_size =batch_size, shuffle =True, num_workers=0, drop_last=False
         )
     while True:
         yield from loader
@@ -70,16 +70,18 @@ class voronoi(Dataset):
         super().__init__()
         max_num_points = 100
         if set_name == "train":
-            path = '../datasets/voronoi/jsons'
+            path = '../datasets/voronoi/json'
         else:
-            path = '../datasets/voronoi/jsons_test'
+            path = '../datasets/voronoi/json_test'
+        print(path)
         self.set_name = set_name
         self.rotation = True # rotation
         self.puzzles = []
         self.rels = []
         houses = {}
         pairss = {}
-        files = glob(f'{path}/*')
+        files = glob(f'{path}/*.json')
+        print(files)
         files = [x.split('/')[-1][:-4].split('_') for x in files]
         notused = set()
         num_p_c =np.zeros(20)
