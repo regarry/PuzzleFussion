@@ -70,9 +70,9 @@ class voronoi(Dataset):
         super().__init__()
         max_num_points = 100
         if set_name == "train":
-            path = '../datasets/voronoi/json'
+            path = '../datasets/voronoi/jsons'
         else:
-            path = '../datasets/voronoi/json_test'
+            path = '../datasets/voronoi/jsons_test'
         print(path)
         self.set_name = set_name
         self.rotation = True # rotation
@@ -80,7 +80,7 @@ class voronoi(Dataset):
         self.rels = []
         houses = {}
         pairss = {}
-        files = glob(f'{path}/*.json')
+        files = glob(f'{path}/*')
         print(files)
         files = [x.split('/')[-1][:-4].split('_') for x in files]
         notused = set()
