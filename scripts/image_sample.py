@@ -61,7 +61,7 @@ def rotate_points(points, cos_theta, sin_theta):
     rotated_points = th.bmm(rotation_matrix.double(), points.double())
     return rotated_points.reshape(shape)
 
-def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False, save_edges=False, ID_COLOR=None, save_svg=False):
+def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False, save_edges=False, ID_COLOR=None, save_svg=False, draw_ = True):
     if not save_gif:
         sample = sample[-1:]
     for k in range(sample.shape[0]):
@@ -125,7 +125,6 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
         sample[k:k+1,:,:,:2] = th.Tensor(center_total).cuda() + poly
         # sample[k:k+1,:,:,:2] = sample[k:k+1,:,:,:2] + poly
     sample = sample[:,:,:,:2]
-    draw_ =False
     if draw_ == True:
         for i in tqdm(range(sample.shape[1])):
             resolution = 256
@@ -268,7 +267,7 @@ def main():
             sample_gt = sample_gt.permute([0, 1, 3, 2])
             gt = save_samples(sample_gt, 'gt', model_kwargs, args.rotation, tmp_count, ID_COLOR=ID_COLOR, save_svg=args.save_svg)
             pred = save_samples(sample, 'pred', model_kwargs, args.rotation, tmp_count, ID_COLOR=ID_COLOR, save_svg=args.save_svg)
-            outs =(get_metric(gt, pred, model_kwargs))
+            outs = (get_metric(gt, pred, model_kwargs))
             #import pdb ; pdb.set_trace()
             pres += outs[1][0]
             recal += outs[1][1]

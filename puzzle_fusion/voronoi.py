@@ -55,11 +55,11 @@ def load_voronoi_data(
     dataset = voronoi(set_name, rotation = rotation)
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size =batch_size, shuffle =True, num_workers=0, drop_last=False
+            dataset, batch_size = batch_size, shuffle = True, num_workers = 0, drop_last = False
         )
     else:
         loader = DataLoader(
-            dataset, batch_size =batch_size, shuffle =True, num_workers=0, drop_last=False
+            dataset, batch_size = batch_size, shuffle = True, num_workers = 0, drop_last = False
         )
     while True:
         yield from loader
@@ -84,8 +84,8 @@ class voronoi(Dataset):
         print(files)
         files = [x.split('/')[-1][:-4].split('_') for x in files]
         notused = set()
-        num_p_c =np.zeros(20)
-        num_h_min =12345678
+        num_p_c = np.zeros(20)
+        num_h_min = 12345678
         num_h_max = -1
         num_h_sum = []
         num_av = []
@@ -99,7 +99,7 @@ class voronoi(Dataset):
             if name[1] not in houses:
                 houses[name[1]] = []
                 f = open(f'{path}/{name[0]}_{name[1]}.json')
-                cnt =json.load(f)
+                cnt = json.load(f)
                 f.close()
                 pairs =[]
                 numbers ={}
@@ -113,7 +113,7 @@ class voronoi(Dataset):
                 for i in range(1, 1+int(list(cnt.keys())[-1])):
                     contours = cnt[str(i)]
                     if( len(contours)<3):
-                        used =False
+                        used = False
                         notused.add(int(name[1][:-1]))
                         houses[name[1]] = []
                         continue
@@ -136,7 +136,7 @@ class voronoi(Dataset):
                         poly = []
                         for cntt in contours:
                             ax = 0 #random.uniform(-2, 2)*img_size[0]/256.0   ## change it if you want to add noise
-                            ay = 0 # random.uniform(-2, 2)*img_size[1]/256.0  ## change it if you want to add noise
+                            ay = 0 #random.uniform(-2, 2)*img_size[1]/256.0  ## change it if you want to add noise
                             a = (cntt[0][0] +ax)/ img_size[0]
                             b = (cntt[0][1]+ay) /img_size[1]
                             poly.append([a,b])
