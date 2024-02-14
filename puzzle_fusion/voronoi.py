@@ -68,9 +68,10 @@ def load_voronoi_data(
 class voronoi(Dataset):
     def __init__(self, set_name, rotation):
         super().__init__()
-        max_num_points = 100
+        max_num_points = 1000
         if set_name == "train":
-            path = '../datasets/voronoi/jsons'
+            #path = '../datasets/voronoi/jsons'
+            path = '../datasets/cube/training' # for cube dataset test
         else:
             path = '../datasets/voronoi/jsons_test'
         print(path)
@@ -84,7 +85,8 @@ class voronoi(Dataset):
         print(files)
         files = [x.split('/')[-1][:-4].split('_') for x in files]
         notused = set()
-        num_p_c = np.zeros(20)
+        #num_p_c = np.zeros(20)
+        num_p_c = np.zeros(max_num_points)
         num_h_min = 12345678
         num_h_max = -1
         num_h_sum = []
@@ -101,8 +103,8 @@ class voronoi(Dataset):
                 f = open(f'{path}/{name[0]}_{name[1]}.json')
                 cnt = json.load(f)
                 f.close()
-                pairs =[]
-                numbers ={}
+                pairs = []
+                numbers = {}
                 if 1+int(list(cnt.keys())[-1])<=3:
                     continue
                 hss = 0

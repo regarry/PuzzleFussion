@@ -66,16 +66,16 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
         sample = sample[-1:]
     for k in range(sample.shape[0]):
         if rotation:
-            rot_s_total=[]
-            rot_c_total=[]
+            rot_s_total = []
+            rot_c_total = []
             for nb in range(model_kwargs[f'room_indices'].shape[0]):
                 array_a = np.array(model_kwargs[f'room_indices'][nb].cpu())
                 room_types = np.where(array_a == array_a.max())[1]
                 room_types = np.append(room_types, -10)
-                rot_s =[]
-                rot_c =[]
-                rt =0
-                no=0
+                rot_s = []
+                rot_c = []
+                rt = 0
+                no = 0
                 for ri in range(len(room_types)):
                     if rt!=room_types[ri]:
                         for nn in range(no):
@@ -105,9 +105,9 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
             array_a = np.array(model_kwargs[f'room_indices'][nb].cpu())
             room_types = np.where(array_a == array_a.max())[1]
             room_types = np.append(room_types, -10)
-            center =[]
-            rt =0
-            no=0
+            center = []
+            rt = 0
+            no = 0
             for ri in range(len(room_types)):
                 if rt!=room_types[ri]:
                     for nn in range(no):
