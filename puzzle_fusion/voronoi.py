@@ -105,42 +105,42 @@ class voronoi(Dataset):
                 f.close()
                 pairs = []
                 numbers = {}
-                if 1+int(list(cnt.keys())[-1])<=3:
+                if (1 + int(list(cnt.keys())[-1])) <= 3:
                     continue
                 hss = 0
                 all_numbers = []
-                num_p_c[ 1+int(list(cnt.keys())[-1])]+=1
+                num_p_c[1 + int(list(cnt.keys())[-1])] += 1
                 num_av_t = 0
                 num_av_c = 0
-                for i in range(1, 1+int(list(cnt.keys())[-1])):
+                for i in range(1, 1 + int(list(cnt.keys())[-1])):
                     contours = cnt[str(i)]
                     if( len(contours)<3):
                         used = False
                         notused.add(int(name[1][:-1]))
                         houses[name[1]] = []
                         continue
-                    img_size =cnt["0"]
+                    img_size = cnt["0"]
                     image_size = img_size
-                    wxx = 2*img_size[0]/256.0
-                    wyy =2* img_size[1]/256.0
+                    wxx = 2 * img_size[0]/256.0
+                    wyy = 2 * img_size[1]/256.0
                     numbers[i] = []  
-                    if (len(contours)> max_num_av):
+                    if (len(contours) > max_num_av):
                         max_num_av = len(contours)
-                    if (len(contours)< min_num_av):
+                    if (len(contours) < min_num_av):
                         min_num_av = len(contours)
-                    num_av_t+=len(contours) 
-                    num_av_c+=1 
+                    num_av_t += len(contours) 
+                    num_av_c += 1 
                     for cnc in contours:
                             all_numbers.append([cnc[0], hss, i])
                             numbers[i].append([cnc[0], hss, i])
-                            hss+=1
+                            hss += 1
                     if used == True:
                         poly = []
                         for cntt in contours:
                             ax = 0 #random.uniform(-2, 2)*img_size[0]/256.0   ## change it if you want to add noise
                             ay = 0 #random.uniform(-2, 2)*img_size[1]/256.0  ## change it if you want to add noise
-                            a = (cntt[0][0] +ax)/ img_size[0]
-                            b = (cntt[0][1]+ay) /img_size[1]
+                            a = (cntt[0][0] +ax) / img_size[0]
+                            b = (cntt[0][1]+ay) / img_size[1]
                             poly.append([a,b])
                         cx = np.mean(np.array(poly)[:,0])
                         cy =  np.mean(np.array(poly)[:,1])
@@ -154,34 +154,34 @@ class voronoi(Dataset):
                             min_diss =10000
                             pair_b = -1
                             point = a[0]
-                            index =a [1]
-                            room_index =a[2]
+                            index = a[1]
+                            room_index = a[2]
                             for  nn in all_numbers:
-                                point_b =nn[0]
+                                point_b = nn[0]
                                 #print(point , point_b, all_numbers)
-                                index_b =nn [1]
-                                room_index_b =nn[2]
+                                index_b = nn[1]
+                                room_index_b = nn[2]
                                 if room_index == room_index_b:
                                     continue
-                                if abs(math.dist(point , point_b)) <min_diss and abs(math.dist(point , point_b)) < 10*abs(math.sqrt(wxx**2 + wyy**2)):
+                                if abs(math.dist(point , point_b)) < min_diss and abs(math.dist(point , point_b)) < 10*abs(math.sqrt(wxx**2 + wyy**2)):
                                     min_diss = abs(math.dist(point , point_b))
-                                    pair_b =index_b
+                                    pair_b = index_b
                             if pair_b!=-1 :
                                 pairs.append([index, pair_b])
                         pairss[name[1]] = pairs
                         pairss[name[1]] = pairs
-                        if image_size[0] <50 or image_size[1] <50:
+                        if image_size[0] < 50 or image_size[1] < 50:
                             pairss[name[1]] = []
                             houses[name[1]] = []
-                        if len(all_numbers)>100 or len(all_numbers) <10 or len(pairs)>100 :
+                        if len(all_numbers) > 100 or len(all_numbers) < 10 or len(pairs) > 100 :
                             pairss[name[1]] = []
                             houses[name[1]] = []
 
         keyss = houses.keys()
-        self.puzzles1 =[]
-        self.rels =[]
+        self.puzzles1 = []
+        self.rels = []
         for ke in keyss:
-            if len(houses[ke])>1 and len(pairss[ke]) >= 3:
+            if len(houses[ke]) > 1 and len(pairss[ke]) >= 3:
                 self.puzzles1.append(houses[ke])
                 padding = np.zeros((100-len(pairss[ke]), 2))
                 rel = np.concatenate((np.array(pairss[ke]), padding), 0)
@@ -217,13 +217,13 @@ class voronoi(Dataset):
                 puzzle.append(piece)
             
             puzzle_layouts = np.concatenate(puzzle, 0)
-            if len(puzzle_layouts)>max_num_points:
+            if len(puzzle_layouts) > max_num_points:
                 assert False
             num_h_sum.append(len(puzzle_layouts))
-            if num_h_min >len(puzzle_layouts):
-                num_h_min =len(puzzle_layouts)
-            if num_h_max <len(puzzle_layouts):
-                num_h_max =len(puzzle_layouts)
+            if num_h_min > len(puzzle_layouts):
+                num_h_min = len(puzzle_layouts)
+            if num_h_max < len(puzzle_layouts):
+                num_h_max = len(puzzle_layouts)
             padding = np.zeros((max_num_points-len(puzzle_layouts), 73))
             gen_mask = np.ones((max_num_points, max_num_points))
             gen_mask[:len(puzzle_layouts), :len(puzzle_layouts)] = 0
@@ -234,11 +234,25 @@ class voronoi(Dataset):
             puzzles.append(puzzle_layouts)
             self_masks.append(self_mask)
             gen_masks.append(gen_mask)
+        print(f"Puzzles: {puzzles}\n\n")
+        print(f"Houses: {houses}\n\n")
+        print(f"Pairss: {pairss}\n\n")
+        print(f"Poly: {poly}\n\n")
+        print(f"Self.puzzles1: {self.puzzles1}\n\n")
+        print(f"All numbers: {all_numbers}\n\n")
+        with open('output.txt', 'w') as f:
+            f.write(f"Puzzles: {puzzles}\n\n")
+            f.write(f"Houses: {houses}\n\n")
+            f.write(f"Pairss: {pairss}\n\n")
+            f.write(f"Poly: {poly}\n\n")
+            f.write(f"Self.puzzles1: {self.puzzles1}\n\n")
+            f.write(f"All numbers: {all_numbers}\n\n")
+        
         self.max_num_points = max_num_points
         self.puzzles = puzzles
         self.self_masks = self_masks
         self.gen_masks = gen_masks
-        self.num_coords = 4
+        self.num_coords = 4 # what is this for?
        
     def __len__(self):
         return len(self.puzzles)
