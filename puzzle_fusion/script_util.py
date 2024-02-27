@@ -25,7 +25,7 @@ def diffusion_defaults():
 def update_arg_parser(args):
     args.num_channels = 256
     num_coords = 2 if not args.rotation else 4
-    if args.dataset=='crosscut' or  args.dataset =='voronoi':
+    if args.dataset=='crosscut' or  args.dataset =='voronoi' or args.dataset == 'cube':
         args.input_channels = num_coords #+ (2*8)
         args.condition_channels = 66
         args.out_channels = num_coords * 1

@@ -47,6 +47,13 @@ def main():
             set_name=args.set_name,
             rotation=args.rotation,
         )
+    elif args.dataset == 'cube':
+        from puzzle_fusion.cube import load_cube_data
+        data = load_cube_data(
+            batch_size=args.batch_size,
+            set_name=args.set_name,
+            rotation=args.rotation,
+        )
     else:
         print('dataset not exist!')
         assert False

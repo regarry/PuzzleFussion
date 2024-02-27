@@ -42,7 +42,7 @@ def rotate_points(points, indices, should):
     return rotated_points, rotation_angles
 
 
-def load_voronoi_data(
+def load_cube_data(
     batch_size,
     set_name,
     rotation 
@@ -50,9 +50,9 @@ def load_voronoi_data(
     """
     For a dataset, create a generator over (shapes, kwargs) pairs.
     """
-    print(f"loading {set_name} of voronoi...")
+    print(f"loading {set_name} of cube...")
     deterministic = False if set_name == 'train' else True
-    dataset = voronoi(set_name, rotation = rotation)
+    dataset = cube(set_name, rotation = rotation)
     if deterministic:
         loader = DataLoader(
             dataset, batch_size = batch_size, shuffle = True, num_workers = 0, drop_last = False
@@ -65,21 +65,22 @@ def load_voronoi_data(
         yield from loader
 
 # roomshape  #center  #index  
-class voronoi(Dataset):
+class cube(Dataset):
     def __init__(self, set_name, rotation):
         super().__init__()
         max_num_points = 1000
         if set_name == "train":
-            path = '../datasets/voronoi/jsons'
-            #path = '../datasets/cube/training' # for cube dataset test
+            
+            path = '../datasets/cube/training' # for cube dataset test
         else:
-            path = '../datasets/voronoi/jsons_test'
+            path = '../datasets/cube/jsons_test'
+        open('output.txt', 'w')
         print(path)
         self.set_name = set_name
         self.rotation = True # rotation
         self.puzzles = []
         self.rels = []
-        houses = {}
+        volumes = {}
         pairss = {}
         files = glob(f'{path}/*')
         print(files)
@@ -94,69 +95,77 @@ class voronoi(Dataset):
         min_num_av = 123456
         max_num_av = -1
         
-        for name in tqdm(files, desc ='loading data files'):
+        for file_name in tqdm(files, desc ='loading data files'):
             used = True
             image_size =[0,0]
-            name[1] = name[1][:-1]
-            if name[1] not in houses:
-                houses[name[1]] = []
-                f = open(f'{path}/{name[0]}_{name[1]}.json')
-                cnt = json.load(f)
+            file_number = file_name[1][:-1]
+            if file_number not in volumes:
+                volumes[file_number] = []
+                f = open(f'{path}/{file_name[0]}_{file_number}.json')
+                json_data = json.load(f)
                 f.close()
                 pairs = []
                 numbers = {}
-                if (1 + int(list(cnt.keys())[-1])) <= 3:
+                if (1 + int(list(json_data.keys())[-1])) <= 3:
                     continue
                 hss = 0
                 all_numbers = []
-                num_p_c[1 + int(list(cnt.keys())[-1])] += 1
+                num_p_c[1 + int(list(json_data.keys())[-1])] += 1
                 num_av_t = 0
                 num_av_c = 0
-                for i in range(1, 1 + int(list(cnt.keys())[-1])):
-                    contours = cnt[str(i)]
-                    if( len(contours)<3):
-                        used = False
-                        notused.add(int(name[1][:-1]))
-                        houses[name[1]] = []
+                #print(list(json_data.keys()))
+                for slice_name_str in list(json_data.keys()):
+                    slice_name_int = int(slice_name_str)
+                    if slice_name_int == 0:
                         continue
-                    img_size = cnt["0"]
+                    
+                    slice_data = json_data[str(slice_name_int)]
+                    if(len(slice_data) < 3):
+                        used = False
+                        notused.add(int(file_number[:-1]))
+                        volumes[file_number] = []
+                        continue
+                    img_size = json_data["0"]
+                    #print(img_size)
                     image_size = img_size
                     wxx = 2 * img_size[0]/256.0
                     wyy = 2 * img_size[1]/256.0
-                    numbers[i] = []  
-                    if (len(contours) > max_num_av):
-                        max_num_av = len(contours)
-                    if (len(contours) < min_num_av):
-                        min_num_av = len(contours)
-                    num_av_t += len(contours) 
+                    #wzz = 2 * img_size[2]/256.0
+                    numbers[slice_name_int] = []  
+                    if (len(slice_data) > max_num_av):
+                        max_num_av = len(slice_data)
+                    if (len(slice_data) < min_num_av):
+                        min_num_av = len(slice_data)
+                    num_av_t += len(slice_data) 
                     num_av_c += 1 
-                    for cnc in contours:
-                            all_numbers.append([cnc[0], hss, i])
-                            numbers[i].append([cnc[0], hss, i])
-                            hss += 1
+                    for marker in slice_data:
+                        all_numbers.append([marker[0], hss, slice_name_int])
+                        numbers[slice_name_int].append([marker[0], hss, slice_name_int])
+                        hss += 1
                     if used == True:
-                        poly = []
-                        for cntt in contours:
+                        normalized_slice_coordinates = []
+                        for marker in slice_data:
                             ax = 0 #random.uniform(-2, 2)*img_size[0]/256.0   ## change it if you want to add noise
                             ay = 0 #random.uniform(-2, 2)*img_size[1]/256.0  ## change it if you want to add noise
-                            a = (cntt[0][0] +ax) / img_size[0]
-                            b = (cntt[0][1]+ay) / img_size[1]
-                            poly.append([a,b])
-                        cx = np.mean(np.array(poly)[:,0])
-                        cy =  np.mean(np.array(poly)[:,1])
-                        houses[name[1]].append( {'poly' : np.array(poly) -np.array([cx,cy]), 'center': np.array([cx,cy]),'image_size': img_size, 'name': name[1]})
+                            normalized_x_coordinate = (marker[0][0] + ax) / img_size[0]
+                            normalized_y_coordinate = (marker[0][1] + ay) / img_size[1]
+                            normalized_slice_coordinates.append([normalized_x_coordinate,normalized_y_coordinate])
+                        cx = np.mean(np.array(normalized_slice_coordinates)[:,0])
+                        cy =  np.mean(np.array(normalized_slice_coordinates)[:,1])
+                        cz = 0
+                        volumes[file_number].append( {'normalized_slice_coordinates' : np.array(normalized_slice_coordinates) -np.array([cx,cy]), 'center': np.array([cx,cy]),'image_size': img_size, 'name': file_number})
                 if num_av_c != 0:
                     num_av.append(num_av_t/num_av_c)        
                 pairs = []
                 for tk in numbers.keys():
                         number = numbers[tk]
                         for a in number:
-                            min_diss =10000
+                            min_diss = 10000
                             pair_b = -1
                             point = a[0]
                             index = a[1]
                             room_index = a[2]
-                            for  nn in all_numbers:
+                            for nn in all_numbers:
                                 point_b = nn[0]
                                 #print(point , point_b, all_numbers)
                                 index_b = nn[1]
@@ -168,21 +177,29 @@ class voronoi(Dataset):
                                     pair_b = index_b
                             if pair_b!=-1 :
                                 pairs.append([index, pair_b])
-                        pairss[name[1]] = pairs
-                        pairss[name[1]] = pairs
+                        pairss[file_number] = pairs
+                        pairss[file_number] = pairs
+                        """
                         if image_size[0] < 50 or image_size[1] < 50:
                             pairss[name[1]] = []
-                            houses[name[1]] = []
+                            volumes[name[1]] = []
                         if len(all_numbers) > 100 or len(all_numbers) < 10 or len(pairs) > 100 :
                             pairss[name[1]] = []
-                            houses[name[1]] = []
-
-        keyss = houses.keys()
+                            volumes[name[1]] = []
+                        """
+        keyss = volumes.keys()
         self.puzzles1 = []
         self.rels = []
+        with open('output.txt', 'a') as f:
+            f.write(f"keyys: {keyss}\n\n")
+            f.write(f"volumes: {volumes}\n\n")
+            f.write(f"pairss: {pairss}\n\n")
+            f.write(f"pairs: {pairs}\n\n")
+            f.write(f"all_numbers: {all_numbers}\n\n")
+            
         for ke in keyss:
-            if len(houses[ke]) > 1 and len(pairss[ke]) >= 3:
-                self.puzzles1.append(houses[ke])
+            if len(volumes[ke]) > 1 and len(pairss[ke]) >= 3:
+                self.puzzles1.append(volumes[ke])
                 padding = np.zeros((100-len(pairss[ke]), 2))
                 rel = np.concatenate((np.array(pairss[ke]), padding), 0)
                 self.rels.append(rel)
@@ -195,16 +212,16 @@ class voronoi(Dataset):
             puzzle = []
             corner_bounds = []
             num_points = 0
-            for i, piece in enumerate(p):
-                poly = piece['poly']
-                center = np.ones_like(poly) * piece['center']
+            for slice_name_int, piece in enumerate(p):
+                normalized_slice_coordinates = piece['normalized_slice_coordinates']
+                center = np.ones_like(normalized_slice_coordinates) * piece['center']
                 # Adding conditions
-                num_piece_corners = len(poly)
+                num_piece_corners = len(normalized_slice_coordinates)
                 piece_index = np.repeat(np.array([get_one_hot(len(puzzle)+1, 32)]), num_piece_corners, 0)
                 corner_index = np.array([get_one_hot(x, 32) for x in range(num_piece_corners)])
                 # Adding rotation
                 if self.rotation:
-                    poly, angles = rotate_points(poly, piece_index, True)
+                    normalized_slice_coordinates, angles = rotate_points(normalized_slice_coordinates, piece_index, True)
                 # Src_key_padding_mask
                 padding_mask = np.repeat(1, num_piece_corners)
                 padding_mask = np.expand_dims(padding_mask, 1)
@@ -213,7 +230,7 @@ class voronoi(Dataset):
                 connections += num_points
                 corner_bounds.append([num_points, num_points+num_piece_corners])
                 num_points += num_piece_corners
-                piece = np.concatenate((center, angles, poly, corner_index, piece_index, padding_mask, connections), 1)
+                piece = np.concatenate((center, angles, normalized_slice_coordinates, corner_index, piece_index, padding_mask, connections), 1)
                 puzzle.append(piece)
             
             puzzle_layouts = np.concatenate(puzzle, 0)
@@ -229,24 +246,19 @@ class voronoi(Dataset):
             gen_mask[:len(puzzle_layouts), :len(puzzle_layouts)] = 0
             puzzle_layouts = np.concatenate((puzzle_layouts, padding), 0)
             self_mask = np.ones((max_num_points, max_num_points))
-            for i in range(len(corner_bounds)):
-                self_mask[corner_bounds[i][0]:corner_bounds[i][1],corner_bounds[i][0]:corner_bounds[i][1]] = 0
+            for slice_name_int in range(len(corner_bounds)):
+                self_mask[corner_bounds[slice_name_int][0]:corner_bounds[slice_name_int][1],corner_bounds[slice_name_int][0]:corner_bounds[slice_name_int][1]] = 0
             puzzles.append(puzzle_layouts)
             self_masks.append(self_mask)
             gen_masks.append(gen_mask)
-        print(f"Puzzles: {puzzles}\n\n")
-        print(f"Houses: {houses}\n\n")
-        print(f"Pairss: {pairss}\n\n")
-        print(f"Poly: {poly}\n\n")
-        print(f"Self.puzzles1: {self.puzzles1}\n\n")
-        print(f"All numbers: {all_numbers}\n\n")
-        with open('output.txt', 'w') as f:
-            f.write(f"Puzzles: {puzzles}\n\n")
-            f.write(f"Houses: {houses}\n\n")
-            f.write(f"Pairss: {pairss}\n\n")
-            f.write(f"Poly: {poly}\n\n")
-            f.write(f"Self.puzzles1: {self.puzzles1}\n\n")
-            f.write(f"All numbers: {all_numbers}\n\n")
+        with open('output.txt', 'a') as f:
+            f.write(f"puzzles: {puzzles}\n\n")
+            f.write(f"volumes: {volumes}\n\n")
+            f.write(f"pairss: {pairss}\n\n")
+            f.write(f"pairs: {pairs}\n\n")
+            f.write(f"normalized_slice_coordinates: {normalized_slice_coordinates}\n\n")
+            f.write(f"self.puzzles1: {self.puzzles1}\n\n")
+            f.write(f"all_numbers: {all_numbers}\n\n")
         
         self.max_num_points = max_num_points
         self.puzzles = puzzles
@@ -263,8 +275,8 @@ class voronoi(Dataset):
         cond = {
                 'self_mask': self.self_masks[idx],
                 'gen_mask': self.gen_masks[idx],
-                # 'poly': self.puzzles[idx][:, self.num_coords:self.num_coords+2],
-                'poly': polys,
+                # 'normalized_slice_coordinates': self.puzzles[idx][:, self.num_coords:self.num_coords+2],
+                'normalized_slice_coordinates': polys,
                 'corner_indices': self.puzzles[idx][:, self.num_coords+2:self.num_coords+34],
                 'room_indices': self.puzzles[idx][:, self.num_coords+34:self.num_coords+66],
                 'src_key_padding_mask': 1-self.puzzles[idx][:, self.num_coords+66],
@@ -275,4 +287,4 @@ class voronoi(Dataset):
         return arr.astype(float), cond
 
 if __name__ == '__main__':
-    dataset = voronoi('test')
+    dataset = cube('test')
