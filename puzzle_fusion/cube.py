@@ -105,11 +105,11 @@ class cube(Dataset):
                 json_data = json.load(f)
                 f.close()
                 pairs = []
-                numbers = {}
+                markers_by_slice_number = {}
                 if (1 + int(list(json_data.keys())[-1])) <= 3:
                     continue
-                hss = 0
-                all_numbers = []
+                cummulative_marker_counter = 0
+                all_volume_markers = []
                 num_p_c[1 + int(list(json_data.keys())[-1])] += 1
                 num_av_t = 0
                 num_av_c = 0
@@ -131,7 +131,7 @@ class cube(Dataset):
                     wxx = 2 * img_size[0]/256.0
                     wyy = 2 * img_size[1]/256.0
                     #wzz = 2 * img_size[2]/256.0
-                    numbers[slice_number] = []  
+                    markers_by_slice_number[slice_number] = []  
                     if (len(slice_data) > max_num_av):
                         max_num_av = len(slice_data)
                     if (len(slice_data) < min_num_av):
@@ -139,9 +139,9 @@ class cube(Dataset):
                     num_av_t += len(slice_data) 
                     num_av_c += 1 
                     for marker in slice_data:
-                        all_numbers.append([marker[0], hss, slice_number])
-                        numbers[slice_number].append([marker[0], hss, slice_number])
-                        hss += 1
+                        all_volume_markers.append([marker[0], cummulative_marker_counter, slice_number])
+                        markers_by_slice_number[slice_number].append([marker[0], cummulative_marker_counter, slice_number])
+                        cummulative_marker_counter += 1
                     if used == True:
                         normalized_slice_coordinates = []
                         for marker in slice_data:
@@ -157,35 +157,35 @@ class cube(Dataset):
                 if num_av_c != 0:
                     num_av.append(num_av_t/num_av_c)        
                 pairs = []
-                for tk in numbers.keys():
-                        number = numbers[tk]
-                        for a in number:
-                            min_diss = 10000
+                for slice_i in markers_by_slice_number.keys():
+                        slice_marker_data = markers_by_slice_number[slice_i]
+                        for marker_data in slice_marker_data:
+                            minimum_distance = 10000
                             pair_b = -1
-                            point = a[0]
-                            index = a[1]
-                            room_index = a[2]
-                            for nn in all_numbers:
+                            marker_i = marker_data[0]
+                            index = marker_data[1]
+                            room_index = marker_data[2]
+                            for nn in all_volume_markers:
                                 point_b = nn[0]
                                 #print(point , point_b, all_numbers)
                                 index_b = nn[1]
                                 room_index_b = nn[2]
                                 if room_index == room_index_b:
                                     continue
-                                if abs(math.dist(point , point_b)) < min_diss and abs(math.dist(point , point_b)) < 10*abs(math.sqrt(wxx**2 + wyy**2)):
-                                    min_diss = abs(math.dist(point , point_b))
+                                if abs(math.dist(marker_i , point_b)) < minimum_distance and abs(math.dist(marker_i , point_b)) < 10*abs(math.sqrt(wxx**2 + wyy**2)):
+                                    minimum_distance = abs(math.dist(marker_i , point_b))
                                     pair_b = index_b
                             if pair_b!=-1 :
                                 pairs.append([index, pair_b])
                         pairss[file_number] = pairs
 
-                        """
                         if image_size[0] < 50 or image_size[1] < 50:
-                            pairss[name[1]] = []
-                            volumes[name[1]] = []
+                            pairss[file_number] = []
+                            volumes[file_number] = []
+                        """   
                         if len(all_numbers) > 100 or len(all_numbers) < 10 or len(pairs) > 100 :
-                            pairss[name[1]] = []
-                            volumes[name[1]] = []
+                            pairss[file_number] = []
+                            volumes[file_number] = []
                         """
         keyss = volumes.keys()
         self.puzzles1 = []
@@ -194,14 +194,15 @@ class cube(Dataset):
             f.write(f"keyys: {keyss}\n\n")
             f.write(f"volumes: {volumes}\n\n")
             f.write(f"pairss: {pairss}\n\n")
-            f.write(f"pairs: {pairs}\n\n")
-            f.write(f"all_numbers: {all_numbers}\n\n")
-            
+            f.write(f"all_numbers: {all_volume_markers}\n\n")
+        print(len(pairss["1"]))
         for key in keyss:
             if len(volumes[key]) > 1 and len(pairss[key]) >= 3:
                 self.puzzles1.append(volumes[key])
-                padding = np.zeros((100-len(pairss[key]), 2))
+                padding = np.zeros((1000-len(pairss[key]), 2))
+                #padding = np.zeros((100, 2)) # did this since I have not figured out the matching loss yet
                 rel = np.concatenate((np.array(pairss[key]), padding), 0)
+                #rel = padding
                 self.rels.append(rel)
 
         get_one_hot = lambda x, z: np.eye(z)[x]
@@ -253,12 +254,9 @@ class cube(Dataset):
             gen_masks.append(gen_mask)
         with open('output.txt', 'a') as f:
             f.write(f"puzzles: {puzzles}\n\n")
-            f.write(f"volumes: {volumes}\n\n")
-            f.write(f"pairss: {pairss}\n\n")
-            f.write(f"pairs: {pairs}\n\n")
             f.write(f"normalized_slice_coordinates: {normalized_slice_coordinates}\n\n")
             f.write(f"self.puzzles1: {self.puzzles1}\n\n")
-            f.write(f"all_numbers: {all_numbers}\n\n")
+
         
         self.max_num_points = max_num_points
         self.puzzles = puzzles
@@ -271,6 +269,8 @@ class cube(Dataset):
 
     def __getitem__(self, idx):
         arr = self.puzzles[idx][:, :self.num_coords]
+        arr = np.transpose(arr, [1, 0]).astype(float)
+        
         polys = self.puzzles[idx][:, self.num_coords:self.num_coords+2]
         cond = {
                 'self_mask': self.self_masks[idx],
@@ -283,8 +283,8 @@ class cube(Dataset):
                 'connections': self.puzzles[idx][:, self.num_coords+67:self.num_coords+69],
                 'rels': self.rels[idx],
                 }
-        arr = np.transpose(arr, [1, 0])
-        return arr.astype(float), cond
+        
+        return arr, cond
 
 if __name__ == '__main__':
     dataset = cube('test')

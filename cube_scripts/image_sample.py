@@ -61,7 +61,7 @@ def rotate_points(points, cos_theta, sin_theta):
     rotated_points = th.bmm(rotation_matrix.double(), points.double())
     return rotated_points.reshape(shape)
 
-def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False, save_edges=False, ID_COLOR=None, save_svg=False, draw_ = True):
+def save_samples(sample, type, model_kwargs, rotation, tmp_count, save_gif=False, save_edges=False, ID_COLOR=None, save_svg=False, draw_ = True):
     if not save_gif:
         sample = sample[-1:]
     for k in range(sample.shape[0]):
@@ -178,11 +178,11 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
                 #images3.append(Image.open(io.BytesIO(cairosvg.svg2png(draw3.asSvg()))))
                 if k==sample.shape[0]-1 or True:
                     if save_edges:
-                        draw.save_svg(f'outputs/{ext}/{tmp_count+i}_{k}_{ext}.svg')
+                        draw.save_svg(f'outputs/{type}/{tmp_count+i}_{k}_{type}.svg')
                     if save_svg:
-                        draw_color.save_svg(f'outputs/{ext}/{tmp_count+i}c_{k}_{ext}.svg')
+                        draw_color.save_svg(f'outputs/{type}/{tmp_count+i}c_{k}_{type}.svg')
                     else:
-                        Image.open(io.BytesIO(cairosvg.svg2png(draw_color.asSvg()))).save(f'outputs/{ext}/{tmp_count+i}c_{ext}.png')
+                        Image.open(io.BytesIO(cairosvg.svg2png(draw_color.asSvg()))).save(f'outputs/{type}/{tmp_count+i}c_{type}.png')
             # if save_gif:
             #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}.gif', images, fps=10, loop=1)
             #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v2.gif', images2, fps=10, loop=1)
