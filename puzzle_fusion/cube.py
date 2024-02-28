@@ -114,12 +114,12 @@ class cube(Dataset):
                 num_av_t = 0
                 num_av_c = 0
                 #print(list(json_data.keys()))
-                for slice_name_str in list(json_data.keys()):
-                    slice_name_int = int(slice_name_str)
-                    if slice_name_int == 0:
+                for slice_number_str in list(json_data.keys()):
+                    slice_number = int(slice_number_str)
+                    if slice_number == 0:
                         continue
                     
-                    slice_data = json_data[str(slice_name_int)]
+                    slice_data = json_data[str(slice_number)]
                     if(len(slice_data) < 3):
                         used = False
                         notused.add(int(file_number[:-1]))
@@ -131,7 +131,7 @@ class cube(Dataset):
                     wxx = 2 * img_size[0]/256.0
                     wyy = 2 * img_size[1]/256.0
                     #wzz = 2 * img_size[2]/256.0
-                    numbers[slice_name_int] = []  
+                    numbers[slice_number] = []  
                     if (len(slice_data) > max_num_av):
                         max_num_av = len(slice_data)
                     if (len(slice_data) < min_num_av):
@@ -139,8 +139,8 @@ class cube(Dataset):
                     num_av_t += len(slice_data) 
                     num_av_c += 1 
                     for marker in slice_data:
-                        all_numbers.append([marker[0], hss, slice_name_int])
-                        numbers[slice_name_int].append([marker[0], hss, slice_name_int])
+                        all_numbers.append([marker[0], hss, slice_number])
+                        numbers[slice_number].append([marker[0], hss, slice_number])
                         hss += 1
                     if used == True:
                         normalized_slice_coordinates = []
@@ -152,7 +152,7 @@ class cube(Dataset):
                             normalized_slice_coordinates.append([normalized_x_coordinate,normalized_y_coordinate])
                         cx = np.mean(np.array(normalized_slice_coordinates)[:,0])
                         cy =  np.mean(np.array(normalized_slice_coordinates)[:,1])
-                        cz = 0
+                        #cz = 0
                         volumes[file_number].append( {'normalized_slice_coordinates' : np.array(normalized_slice_coordinates) -np.array([cx,cy]), 'center': np.array([cx,cy]),'image_size': img_size, 'name': file_number})
                 if num_av_c != 0:
                     num_av.append(num_av_t/num_av_c)        
@@ -178,7 +178,7 @@ class cube(Dataset):
                             if pair_b!=-1 :
                                 pairs.append([index, pair_b])
                         pairss[file_number] = pairs
-                        pairss[file_number] = pairs
+
                         """
                         if image_size[0] < 50 or image_size[1] < 50:
                             pairss[name[1]] = []
@@ -197,11 +197,11 @@ class cube(Dataset):
             f.write(f"pairs: {pairs}\n\n")
             f.write(f"all_numbers: {all_numbers}\n\n")
             
-        for ke in keyss:
-            if len(volumes[ke]) > 1 and len(pairss[ke]) >= 3:
-                self.puzzles1.append(volumes[ke])
-                padding = np.zeros((100-len(pairss[ke]), 2))
-                rel = np.concatenate((np.array(pairss[ke]), padding), 0)
+        for key in keyss:
+            if len(volumes[key]) > 1 and len(pairss[key]) >= 3:
+                self.puzzles1.append(volumes[key])
+                padding = np.zeros((100-len(pairss[key]), 2))
+                rel = np.concatenate((np.array(pairss[key]), padding), 0)
                 self.rels.append(rel)
 
         get_one_hot = lambda x, z: np.eye(z)[x]
@@ -212,7 +212,7 @@ class cube(Dataset):
             puzzle = []
             corner_bounds = []
             num_points = 0
-            for slice_name_int, piece in enumerate(p):
+            for i, piece in enumerate(p):
                 normalized_slice_coordinates = piece['normalized_slice_coordinates']
                 center = np.ones_like(normalized_slice_coordinates) * piece['center']
                 # Adding conditions
@@ -246,8 +246,8 @@ class cube(Dataset):
             gen_mask[:len(puzzle_layouts), :len(puzzle_layouts)] = 0
             puzzle_layouts = np.concatenate((puzzle_layouts, padding), 0)
             self_mask = np.ones((max_num_points, max_num_points))
-            for slice_name_int in range(len(corner_bounds)):
-                self_mask[corner_bounds[slice_name_int][0]:corner_bounds[slice_name_int][1],corner_bounds[slice_name_int][0]:corner_bounds[slice_name_int][1]] = 0
+            for i in range(len(corner_bounds)):
+                self_mask[corner_bounds[i][0]:corner_bounds[i][1],corner_bounds[i][0]:corner_bounds[i][1]] = 0
             puzzles.append(puzzle_layouts)
             self_masks.append(self_mask)
             gen_masks.append(gen_mask)
@@ -275,8 +275,8 @@ class cube(Dataset):
         cond = {
                 'self_mask': self.self_masks[idx],
                 'gen_mask': self.gen_masks[idx],
-                # 'normalized_slice_coordinates': self.puzzles[idx][:, self.num_coords:self.num_coords+2],
-                'normalized_slice_coordinates': polys,
+                # 'poly': self.puzzles[idx][:, self.num_coords:self.num_coords+2],
+                'poly': polys,
                 'corner_indices': self.puzzles[idx][:, self.num_coords+2:self.num_coords+34],
                 'room_indices': self.puzzles[idx][:, self.num_coords+34:self.num_coords+66],
                 'src_key_padding_mask': 1-self.puzzles[idx][:, self.num_coords+66],
