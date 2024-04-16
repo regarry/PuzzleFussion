@@ -50,7 +50,7 @@ def load_voronoi_data(
     """
     For a dataset, create a generator over (shapes, kwargs) pairs.
     """
-    print(f"loading {set_name} of voronoi...")
+    #print(f"loading {set_name} of voronoi...")
     deterministic = False if set_name == 'train' else True
     dataset = voronoi(set_name, rotation = rotation)
     if deterministic:
@@ -71,10 +71,10 @@ class voronoi(Dataset):
         max_num_points = 1000
         if set_name == "train":
             path = '../datasets/voronoi/jsons'
-            #path = '../datasets/cube/training' # for cube dataset test
+            #path = '../datasets/voronoi/mini_jsons'
         else:
             path = '../datasets/voronoi/jsons_test'
-        print(path)
+        #print(path)
         self.set_name = set_name
         self.rotation = True # rotation
         self.puzzles = []
@@ -82,7 +82,7 @@ class voronoi(Dataset):
         houses = {}
         pairss = {}
         files = glob(f'{path}/*')
-        print(files)
+        #print(files)
         files = [x.split('/')[-1][:-4].split('_') for x in files]
         notused = set()
         #num_p_c = np.zeros(20)
@@ -234,19 +234,19 @@ class voronoi(Dataset):
             puzzles.append(puzzle_layouts)
             self_masks.append(self_mask)
             gen_masks.append(gen_mask)
-        print(f"Puzzles: {puzzles}\n\n")
-        print(f"Houses: {houses}\n\n")
-        print(f"Pairss: {pairss}\n\n")
-        print(f"Poly: {poly}\n\n")
-        print(f"Self.puzzles1: {self.puzzles1}\n\n")
-        print(f"All numbers: {all_numbers}\n\n")
-        with open('output.txt', 'w') as f:
+        #print(f"Puzzles: {puzzles}\n\n")
+        #print(f"Houses: {houses}\n\n")
+        #print(f"Pairss: {pairss}\n\n")
+        #print(f"Poly: {poly}\n\n")
+        #print(f"Self.puzzles1: {self.puzzles1}\n\n")
+        #print(f"All numbers: {all_numbers}\n\n")
+        """with open('dataloading_output.txt', 'w') as f:
             f.write(f"Puzzles: {puzzles}\n\n")
             f.write(f"Houses: {houses}\n\n")
             f.write(f"Pairss: {pairss}\n\n")
             f.write(f"Poly: {poly}\n\n")
             f.write(f"Self.puzzles1: {self.puzzles1}\n\n")
-            f.write(f"All numbers: {all_numbers}\n\n")
+            f.write(f"All numbers: {all_numbers}\n\n")"""
         
         self.max_num_points = max_num_points
         self.puzzles = puzzles
