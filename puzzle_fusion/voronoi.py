@@ -14,6 +14,8 @@ from collections import defaultdict
 from glob import glob
 import torch as th
 import math
+import h5py
+import multiprocessing
 import matplotlib.pyplot as plt
 
 def rotate_points(points, indices, should):
@@ -53,40 +55,69 @@ def load_voronoi_data(
     #print(f"loading {set_name} of voronoi...")
     deterministic = False if set_name == 'train' else True
     dataset = voronoi(set_name, rotation = rotation)
+    num_workers = round(os.cpu_count()/2)  # Get the number of available CPUs
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size = batch_size, shuffle = True, num_workers = 0, drop_last = False
+            dataset, batch_size = batch_size, shuffle = True, num_workers = num_workers, drop_last = False
         )
     else:
         loader = DataLoader(
-            dataset, batch_size = batch_size, shuffle = True, num_workers = 0, drop_last = False
+            dataset, batch_size = batch_size, shuffle = True, num_workers = num_workers, drop_last = False
         )
     while True:
         yield from loader
 
 # roomshape  #center  #index  
 class voronoi(Dataset):
-    def __init__(self, set_name, rotation):
+    def __init__(self, set_name, rotation = True, load = False):
         super().__init__()
-        max_num_points = 1000
+        
         if set_name == "train":
             path = '../datasets/voronoi/jsons'
             #path = '../datasets/voronoi/mini_jsons'
         else:
             path = '../datasets/voronoi/jsons_test'
         #print(path)
+        self.max_num_points = 1000
         self.set_name = set_name
         self.rotation = True # rotation
         self.puzzles = []
         self.rels = []
+        if load:
+            self.load_dict()
+        else:
+            """# Define a worker function to process a single file    
+            # Get the list of files to process
+            files = glob(f'{path}/*.json')
+            
+            # Define the number of worker processes
+            num_workers = multiprocessing.cpu_count()
+            
+            # Create a pool of worker processes
+            pool = multiprocessing.Pool(processes=num_workers)
+            
+            # Use the pool to process the files in parallel
+            pool.map(process_file, files)
+            
+            # Close the pool to release resources
+            pool.close()
+            pool.join()"""
+            
+            self.process_data(path)
+            print("Saving data dict...")
+            self.save_dict()
+            print("Saved data dict.")
+        
+    def process_data(self, path):    
         houses = {}
         pairss = {}
-        files = glob(f'{path}/*')
+        files = glob(f'{path}/*.json')
+        self.file_count = len(files)
         #print(files)
         files = [x.split('/')[-1][:-4].split('_') for x in files]
         notused = set()
         #num_p_c = np.zeros(20)
-        num_p_c = np.zeros(max_num_points)
+        num_p_c = np.zeros(self.max_num_points)
         num_h_min = 12345678
         num_h_max = -1
         num_h_sum = []
@@ -100,9 +131,8 @@ class voronoi(Dataset):
             name[1] = name[1][:-1]
             if name[1] not in houses:
                 houses[name[1]] = []
-                f = open(f'{path}/{name[0]}_{name[1]}.json')
-                cnt = json.load(f)
-                f.close()
+                with open(f'{path}/{name[0]}_{name[1]}.json') as f:
+                    cnt = json.load(f)
                 pairs = []
                 numbers = {}
                 if (1 + int(list(cnt.keys())[-1])) <= 3:
@@ -145,6 +175,9 @@ class voronoi(Dataset):
                         cx = np.mean(np.array(poly)[:,0])
                         cy =  np.mean(np.array(poly)[:,1])
                         houses[name[1]].append( {'poly' : np.array(poly) -np.array([cx,cy]), 'center': np.array([cx,cy]),'image_size': img_size, 'name': name[1]})
+                del cnt
+                del contours
+                
                 if num_av_c != 0:
                     num_av.append(num_av_t/num_av_c)        
                 pairs = []
@@ -176,7 +209,10 @@ class voronoi(Dataset):
                         if len(all_numbers) > 100 or len(all_numbers) < 10 or len(pairs) > 100 :
                             pairss[name[1]] = []
                             houses[name[1]] = []
-
+        del numbers
+        del all_numbers
+        del number
+        print("checkpoint 1")
         keyss = houses.keys()
         self.puzzles1 = []
         self.rels = []
@@ -186,11 +222,15 @@ class voronoi(Dataset):
                 padding = np.zeros((100-len(pairss[ke]), 2))
                 rel = np.concatenate((np.array(pairss[ke]), padding), 0)
                 self.rels.append(rel)
-
+        del pairss
+        del houses
+        del keyss
+        del rel
         get_one_hot = lambda x, z: np.eye(z)[x]
         puzzles = []
         self_masks = []
         gen_masks = []
+        print("checkpoint 2")
         for p in (self.puzzles1):
             puzzle = []
             corner_bounds = []
@@ -217,29 +257,29 @@ class voronoi(Dataset):
                 puzzle.append(piece)
             
             puzzle_layouts = np.concatenate(puzzle, 0)
-            if len(puzzle_layouts) > max_num_points:
+            if len(puzzle_layouts) > self.max_num_points:
                 assert False
             num_h_sum.append(len(puzzle_layouts))
             if num_h_min > len(puzzle_layouts):
                 num_h_min = len(puzzle_layouts)
             if num_h_max < len(puzzle_layouts):
                 num_h_max = len(puzzle_layouts)
-            padding = np.zeros((max_num_points-len(puzzle_layouts), 73))
-            gen_mask = np.ones((max_num_points, max_num_points))
+            padding = np.zeros((self.max_num_points-len(puzzle_layouts), 73))
+            gen_mask = np.ones((self.max_num_points, self.max_num_points))
             gen_mask[:len(puzzle_layouts), :len(puzzle_layouts)] = 0
             puzzle_layouts = np.concatenate((puzzle_layouts, padding), 0)
-            self_mask = np.ones((max_num_points, max_num_points))
+            self_mask = np.ones((self.max_num_points, self.max_num_points))
             for i in range(len(corner_bounds)):
                 self_mask[corner_bounds[i][0]:corner_bounds[i][1],corner_bounds[i][0]:corner_bounds[i][1]] = 0
             puzzles.append(puzzle_layouts)
             self_masks.append(self_mask)
             gen_masks.append(gen_mask)
-        #print(f"Puzzles: {puzzles}\n\n")
-        #print(f"Houses: {houses}\n\n")
-        #print(f"Pairss: {pairss}\n\n")
-        #print(f"Poly: {poly}\n\n")
-        #print(f"Self.puzzles1: {self.puzzles1}\n\n")
-        #print(f"All numbers: {all_numbers}\n\n")
+            #print(f"Puzzles: {puzzles}\n\n")
+            #print(f"Houses: {houses}\n\n")
+            #print(f"Pairss: {pairss}\n\n")
+            #print(f"Poly: {poly}\n\n")
+            #print(f"Self.puzzles1: {self.puzzles1}\n\n")
+            #print(f"All numbers: {all_numbers}\n\n")
         """with open('dataloading_output.txt', 'w') as f:
             f.write(f"Puzzles: {puzzles}\n\n")
             f.write(f"Houses: {houses}\n\n")
@@ -247,13 +287,36 @@ class voronoi(Dataset):
             f.write(f"Poly: {poly}\n\n")
             f.write(f"Self.puzzles1: {self.puzzles1}\n\n")
             f.write(f"All numbers: {all_numbers}\n\n")"""
+        del self.puzzles1
+        del poly
         
-        self.max_num_points = max_num_points
+        print("checkpoint 3")
+        self.max_num_points = self.max_num_points
         self.puzzles = puzzles
+        del puzzles
         self.self_masks = self_masks
+        del self_masks
         self.gen_masks = gen_masks
+        del gen_masks
         self.num_coords = 4 # what is this for?
-       
+        return None
+        
+    def save_dict(self):
+        with h5py.File(f'data_dict_{self.file_count}.h5', 'w') as f:
+            f.create_dataset('puzzles', data=self.puzzles)
+            f.create_dataset('self_masks', data=self.self_masks)
+            f.create_dataset('gen_masks', data=self.gen_masks)
+            f.create_dataset('num_coords', data=self.num_coords)
+            f.create_dataset('rels', data=self.rels)
+
+    def load_dict(self):
+        with h5py.File('data_dict.h5', 'r') as f:
+            self.puzzles = f['puzzles'][:]
+            self.self_masks = f['self_masks'][:]
+            self.gen_masks = f['gen_masks'][:]
+            self.num_coords = f['num_coords'][:]
+            self.rels = f['rels'][:]
+            
     def __len__(self):
         return len(self.puzzles)
 

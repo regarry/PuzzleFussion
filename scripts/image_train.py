@@ -3,8 +3,9 @@ Train a diffusion model on images.
 """
 
 import argparse
-
+import traceback
 import torch as th
+from memory_profiler import profile
 from puzzle_fusion import logger, dist_util
 from puzzle_fusion.resample import create_named_schedule_sampler
 from puzzle_fusion.script_util import (
@@ -16,7 +17,7 @@ from puzzle_fusion.script_util import (
 )
 from puzzle_fusion.train_util import TrainLoop
 
-
+#@profile
 def main():
     args = create_argparser().parse_args()
     update_arg_parser(args)
@@ -76,7 +77,7 @@ def main():
         weight_decay=args.weight_decay,
         lr_anneal_steps=args.lr_anneal_steps,
     ).run_loop()
-    dist_util.cleanup()
+    #dist_util.cleanup()
 
 
 def create_argparser():
@@ -102,4 +103,8 @@ def create_argparser():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
