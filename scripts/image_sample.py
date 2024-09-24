@@ -61,7 +61,7 @@ def rotate_points(points, cos_theta, sin_theta):
     rotated_points = th.bmm(rotation_matrix.double(), points.double())
     return rotated_points.reshape(shape)
 
-def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False, save_edges=False, ID_COLOR=None, save_svg=False):
+def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=True, save_edges=False, ID_COLOR=None, save_svg=True):
     if not save_gif:
         sample = sample[-1:]
     for k in range(sample.shape[0]):
@@ -125,7 +125,7 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
         sample[k:k+1,:,:,:2] = th.Tensor(center_total).cuda() + poly
         # sample[k:k+1,:,:,:2] = sample[k:k+1,:,:,:2] + poly
     sample = sample[:,:,:,:2]
-    draw_ =False
+    draw_ = True             # changed so that we get outputs
     if draw_ == True:
         for i in tqdm(range(sample.shape[1])):
             resolution = 256
@@ -174,9 +174,9 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
                     for corner in poly:
                         draw.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
                         draw3.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
-                #images.append(Image.open(io.BytesIO(cairosvg.svg2png(draw.asSvg()))))
-                #images2.append(Image.open(io.BytesIO(cairosvg.svg2png(draw2.asSvg()))))
-                #images3.append(Image.open(io.BytesIO(cairosvg.svg2png(draw3.asSvg()))))
+                images.append(Image.open(io.BytesIO(cairosvg.svg2png(draw.asSvg()))))
+                images2.append(Image.open(io.BytesIO(cairosvg.svg2png(draw2.asSvg()))))
+                images3.append(Image.open(io.BytesIO(cairosvg.svg2png(draw3.asSvg()))))
                 if k==sample.shape[0]-1 or True:
                     if save_edges:
                         draw.save_svg(f'outputs/{ext}/{tmp_count+i}_{k}_{ext}.svg')
@@ -184,10 +184,10 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=False,
                         draw_color.save_svg(f'outputs/{ext}/{tmp_count+i}c_{k}_{ext}.svg')
                     else:
                         Image.open(io.BytesIO(cairosvg.svg2png(draw_color.asSvg()))).save(f'outputs/{ext}/{tmp_count+i}c_{ext}.png')
-            # if save_gif:
-            #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}.gif', images, fps=10, loop=1)
-            #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v2.gif', images2, fps=10, loop=1)
-            #     imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v3.gif', images3, fps=10, loop=1)
+            if save_gif:
+                imageio.mimwrite(f'outputs/gif/{tmp_count+i}.gif', images, fps=10, loop=1)
+                imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v2.gif', images2, fps=10, loop=1)
+                imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v3.gif', images3, fps=10, loop=1)
     return sample[-1]
 
 def main():
