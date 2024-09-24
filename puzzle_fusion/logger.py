@@ -9,7 +9,6 @@ import tempfile
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
-import torch as th
 
 DEBUG = 10
 INFO = 20
@@ -345,8 +344,7 @@ class Logger(object):
                     for (name, val) in self.name2val.items()
                 },
             )
-            # if self.comm.rank != 0:
-            if th.distributed.get_rank() != 0:
+            if self.comm.rank != 0:
                 d["dummy"] = 1  # so we don't get a warning about empty dict
         out = d.copy()  # Return the dict for unit testing purposes
         for fmt in self.output_formats:
@@ -400,8 +398,7 @@ def mpi_weighted_mean(comm, local_name2valcount):
     Returns: key -> mean
     """
     all_name2valcount = comm.gather(local_name2valcount)
-    # if comm.rank == 0:
-    if th.distributed.get_rank() == 0:
+    if comm.rank == 0:
         name2sum = defaultdict(float)
         name2count = defaultdict(float)
         for n2vc in all_name2valcount:
@@ -409,8 +406,7 @@ def mpi_weighted_mean(comm, local_name2valcount):
                 try:
                     val = float(val)
                 except ValueError:
-                    # if comm.rank == 0:
-                    if th.distributed.get_rank() == 0:
+                    if comm.rank == 0:
                         warnings.warn(
                             "WARNING: tried to compute mean on non-float {}={}".format(
                                 name, val
@@ -440,7 +436,7 @@ def configure(dir=None, format_strs=None, comm=None, log_suffix=""):
     dir = os.path.expanduser(dir)
     os.makedirs(os.path.expanduser(dir), exist_ok=True)
 
-    rank = th.distributed.get_rank() #get_rank_without_mpi_import()
+    rank = get_rank_without_mpi_import()
     if rank > 0:
         log_suffix = log_suffix + "-rank%03i" % rank
 

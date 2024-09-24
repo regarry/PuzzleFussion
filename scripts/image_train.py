@@ -6,7 +6,6 @@ import argparse
 
 import torch as th
 from puzzle_fusion import logger, dist_util
-from puzzle_fusion.crosscut_dataset import load_crosscut_data
 from puzzle_fusion.resample import create_named_schedule_sampler
 from puzzle_fusion.script_util import (
     model_and_diffusion_defaults,
@@ -34,11 +33,19 @@ def main():
 
     logger.log("creating data loader...")
     if args.dataset=='crosscut':
+        from puzzle_fusion.crosscut_dataset import load_crosscut_data
         data = load_crosscut_data(
             batch_size=args.batch_size,
             set_name=args.set_name,
             rotation=args.rotation,
             use_image_features=args.use_image_features,
+        )
+    elif args.dataset == 'voronoi':
+        from puzzle_fusion.voronoi import load_voronoi_data
+        data = load_voronoi_data(
+            batch_size=args.batch_size,
+            set_name=args.set_name,
+            rotation=args.rotation,
         )
     else:
         print('dataset not exist!')
