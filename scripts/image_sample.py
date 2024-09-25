@@ -61,7 +61,7 @@ def rotate_points(points, cos_theta, sin_theta):
     rotated_points = th.bmm(rotation_matrix.double(), points.double())
     return rotated_points.reshape(shape)
 
-def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=True, save_edges=False, ID_COLOR=None, save_svg=True):
+def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=True, save_edges=False, ID_COLOR=None, save_svg=False, save_png=True):
     if not save_gif:
         sample = sample[-1:]
     for k in range(sample.shape[0]):
@@ -128,7 +128,7 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=True, 
     draw_ = True             # changed so that we get outputs
     if draw_ == True:
         for i in tqdm(range(sample.shape[1])):
-            resolution = 256
+            resolution = 2*256
             images = []
             images2 = []
             images3 = []
@@ -159,8 +159,8 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=True, 
                         point = point/2 + 1
                         point = point * resolution//2
                     else:
-                        point = point/2 + 0.5
-                        point = point * resolution
+                        point = point/2 + 1 # replaced + 0.5 with 0
+                        point = point * resolution//2
                     poly.append((point[0], point[1]))
                 c = (len(polys)%28) + 1
                 polys.append(poly)
@@ -174,20 +174,21 @@ def save_samples(sample, ext, model_kwargs, rotation, tmp_count, save_gif=True, 
                     for corner in poly:
                         draw.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
                         draw3.append(drawsvg.Circle(corner[0], corner[1], 2*(resolution/256), fill=ID_COLOR[room_type], fill_opacity=1.0, stroke='gray', stroke_width=0.25))
-                images.append(Image.open(io.BytesIO(cairosvg.svg2png(draw.asSvg()))))
-                images2.append(Image.open(io.BytesIO(cairosvg.svg2png(draw2.asSvg()))))
-                images3.append(Image.open(io.BytesIO(cairosvg.svg2png(draw3.asSvg()))))
+                images.append(Image.open(io.BytesIO(cairosvg.svg2png(draw.as_svg()))))
+                images2.append(Image.open(io.BytesIO(cairosvg.svg2png(draw2.as_svg()))))
+                images3.append(Image.open(io.BytesIO(cairosvg.svg2png(draw3.as_svg()))))
                 if k==sample.shape[0]-1 or True:
                     if save_edges:
                         draw.save_svg(f'outputs/{ext}/{tmp_count+i}_{k}_{ext}.svg')
                     if save_svg:
                         draw_color.save_svg(f'outputs/{ext}/{tmp_count+i}c_{k}_{ext}.svg')
-                    else:
-                        Image.open(io.BytesIO(cairosvg.svg2png(draw_color.asSvg()))).save(f'outputs/{ext}/{tmp_count+i}c_{ext}.png')
+                    if save_png:
+                        Image.open(io.BytesIO(cairosvg.svg2png(draw_color.as_svg()))).save(f'outputs/{ext}/{tmp_count+i}c_{ext}.png')
             if save_gif:
-                imageio.mimwrite(f'outputs/gif/{tmp_count+i}.gif', images, fps=10, loop=1)
-                imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v2.gif', images2, fps=10, loop=1)
-                imageio.mimwrite(f'outputs/gif/{tmp_count+i}_v3.gif', images3, fps=10, loop=1)
+                pass
+                imageio.mimwrite(f'outputs/{ext}/{tmp_count+i}.gif', images, fps=10, loop=1)
+                imageio.mimwrite(f'outputs/{ext}/{tmp_count+i}_v2.gif', images2, fps=10, loop=1)
+                imageio.mimwrite(f'outputs/{ext}/{tmp_count+i}_v3.gif', images3, fps=10, loop=1)
     return sample[-1]
 
 def main():
@@ -266,9 +267,18 @@ def main():
             sample_gt = data_sample.cuda().unsqueeze(0)
             sample = sample.permute([0, 1, 3, 2])
             sample_gt = sample_gt.permute([0, 1, 3, 2])
-            gt = save_samples(sample_gt, 'gt', model_kwargs, args.rotation, tmp_count, ID_COLOR=ID_COLOR, save_svg=args.save_svg)
-            pred = save_samples(sample, 'pred', model_kwargs, args.rotation, tmp_count, ID_COLOR=ID_COLOR, save_svg=args.save_svg)
-            outs =(get_metric(gt, pred, model_kwargs))
+            gt = save_samples(sample_gt, 'gt', model_kwargs, 
+                              args.rotation, tmp_count, 
+                              ID_COLOR=ID_COLOR, save_svg=False, 
+                              save_edges=False, save_png = True, 
+                              save_gif=False)
+            
+            pred = save_samples(sample, 'pred', model_kwargs, 
+                                args.rotation, tmp_count, 
+                                ID_COLOR=ID_COLOR, save_svg=False, 
+                                save_edges=False, save_png = False,
+                                save_gif=True)
+            outs = (get_metric(gt, pred, model_kwargs))
             #import pdb ; pdb.set_trace()
             pres += outs[1][0]
             recal += outs[1][1]
@@ -382,7 +392,9 @@ def create_argparser():
         use_ddim=False,
         model_path="",
         draw_graph=True,
-        save_svg=True,
+        save_svg=False,
+        save_edges=False,
+        save_gif=True
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
