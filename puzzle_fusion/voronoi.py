@@ -58,11 +58,18 @@ def load_voronoi_data(
     num_workers = round(os.cpu_count()/2)  # Get the number of available CPUs
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size = batch_size, shuffle = True, num_workers = num_workers, drop_last = False
+            dataset, 
+            batch_size = batch_size, 
+            shuffle = True, 
+            num_workers = num_workers, 
+            drop_last = True
         )
     else:
         loader = DataLoader(
-            dataset, batch_size = batch_size, shuffle = True, num_workers = num_workers, drop_last = False
+            dataset, 
+            batch_size = batch_size, 
+            shuffle = True,  
+            drop_last = True
         )
     while True:
         yield from loader
@@ -104,9 +111,7 @@ class voronoi(Dataset):
             pool.join()"""
             
             self.process_data(path)
-            print("Saving data dict...")
-            self.save_dict()
-            print("Saved data dict.")
+
         
     def process_data(self, path):    
         houses = {}

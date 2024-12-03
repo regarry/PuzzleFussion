@@ -58,6 +58,7 @@ def rotate_points(points, cos_theta, sin_theta):
     rotation_matrix = rotation_matrix.permute([2,3,4,0,1])
     points = points.reshape(-1, 2, 1)
     rotation_matrix = rotation_matrix.reshape(-1, 2, 2)
+    print(points.shape, rotation_matrix.shape)
     rotated_points = th.bmm(rotation_matrix.double(), points.double())
     return rotated_points.reshape(shape)
 
